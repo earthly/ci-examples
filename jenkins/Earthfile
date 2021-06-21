@@ -1,0 +1,114 @@
+start:
+    LOCALLY
+
+    DO +CREATE_NETWORK
+
+    DO +START_DIND
+    DO +START_SERVER
+
+    DO +GET_UNLOCK_PASSWORD
+
+restart-server:
+    LOCALLY
+
+    DO +STOP_SERVER
+    DO +START_SERVER
+
+restart-dind:
+    LOCALLY
+
+    DO +STOP_DIND
+    DO +START_DIND
+
+cleanup:
+    LOCALLY
+
+    DO +STOP_SERVER
+    DO +STOP_DIND
+
+    DO +REMOVE_NETWORK
+    DO +REMOVE_VOLUMES
+
+jenkins-server:
+    FROM jenkins/jenkins:2.289.1-lts-jdk11
+    USER root
+    RUN apt-get update && apt-get install -y apt-transport-https \
+        ca-certificates curl gnupg2 \
+        software-properties-common
+    RUN curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
+    RUN apt-key fingerprint 0EBFCD88
+    RUN add-apt-repository \
+        "deb [arch=amd64] https://download.docker.com/linux/debian \
+        $(lsb_release -cs) stable"
+    RUN apt-get update && apt-get install -y docker-ce-cli
+    USER jenkins
+    RUN jenkins-plugin-cli --plugins "blueocean:1.24.6 docker-workflow:1.26 docker-plugin:1.2.2"
+    COPY ./install_scripts/*.groovy /usr/share/jenkins/ref/init.groovy.d/
+
+jenkins-earthly-runner:
+    ARG RUNNER_VERSION=4.7
+    
+    FROM earthly/earthly:latest
+    RUN apk add openjdk11
+    ENTRYPOINT []
+    SAVE IMAGE --push dchw/earthly-jenkins:latest
+
+CREATE_NETWORK:
+    COMMAND
+    RUN docker network create jenkins
+
+REMOVE_NETWORK:
+    COMMAND
+    RUN docker network rm jenkins || true
+
+REMOVE_VOLUMES:
+    COMMAND
+    RUN docker volume rm jenkins-data || true
+    RUN docker volume rm jenkins-docker-certs  || true
+
+START_SERVER:
+    COMMAND
+    WITH DOCKER --load jenkins:blueocean=+jenkins-server
+        RUN docker run \
+            --name jenkins-blueocean \
+            --rm \
+            --detach \
+            --network jenkins \
+            --env DOCKER_HOST=tcp://docker:2375 \
+            --env DOCKER_CERT_PATH=/certs/client \
+            --env DOCKER_TLS_VERIFY=1 \
+            --env JAVA_OPTS="-Djenkins.install.runSetupWizard=false" \
+            --publish 8080:8080 \
+            --publish 50000:50000 \
+            --volume jenkins-data:/var/jenkins_home \
+            jenkins:blueocean
+    END
+
+STOP_SERVER:
+    COMMAND
+    RUN docker stop jenkins-blueocean || true
+
+START_DIND:
+    COMMAND
+    RUN docker run \
+        --name jenkins-docker \
+        --rm \
+        --detach \
+        --privileged \
+        --network jenkins \
+        --network-alias docker \
+        --env DOCKER_TLS_CERTDIR= \
+        --volume jenkins-data:/var/jenkins_home \
+        --publish 2375:2375 \
+        docker:dind \
+        --storage-driver overlay2
+
+STOP_DIND:
+    COMMAND
+    RUN docker rm -f jenkins-docker || true
+
+GET_UNLOCK_PASSWORD:
+    COMMAND
+    RUN sh -c 'docker logs -f jenkins-blueocean 2>&1 | { sed -n "/Jenkins is fully up and running/ q" && kill $$ ;}' || true
+    RUN docker logs jenkins-blueocean 2>&1 | sed -n '/\*/,/\*/p'
+    RUN echo "Access the unlock dashboard here: http://localhost:8080"
