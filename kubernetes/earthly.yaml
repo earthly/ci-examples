@@ -17,7 +17,7 @@ spec:
       containers:
       - name: earthly
         image: earthly/earthly:v0.5.17
-        args: ["github.com/earthly/earthly:main+test"]
+        args: ["github.com/earthly/ci-example-project:main+build"]
         volumeMounts:
           - mountPath: /workspace
             name: workspace
