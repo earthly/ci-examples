@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: earthly-buildkitd
+  labels:
+    app: earthly
+    component: buildkitd
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: earthly
+      component: buildkitd
+  template:
+    metadata:
+      labels:
+        app: earthly
+        component: buildkitd
+    spec:
+      containers:
+      - name: buildkitd
+        image: earthly/buildkitd:v0.5.17
+        securityContext:
+          privileged: true
+        volumeMounts:
+          - mountPath: /tmp/earthly
+            name: buildkitd-temp
+        env:
+          - name: BUILDKIT_TCP_TRANSPORT_ENABLED
+            value: 'true'
+          - name: BUILDKIT_TLS_ENABLED
+            value: 'false'
+          - name: BUILDKIT_DEBUG
+            value: 'true'
+      volumes:
+        - name: buildkitd-temp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: earthly-buildkitd
+  labels:
+    app: earthly
+    component: buildkitd
+spec:
+  selector:
+    app: earthly
+    component: buildkitd
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 600
+  ports:
+    - protocol: TCP
+      port: 8372
+      targetPort: 8372

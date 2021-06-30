@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: earthly
+  labels:
+    app: earthly
+    component: earthly
+spec:
+  template:
+    metadata:
+      name: earthly
+      labels:
+        app: earthly
+        component: earthly
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: earthly
+        image: earthly/earthly:v0.5.17
+        args: ["github.com/earthly/earthly:main+test"]
+        volumeMounts:
+          - mountPath: /workspace
+            name: workspace
+        env:
+          - name: NO_DOCKER
+            value: '1'
+          - name: BUILDKIT_HOST
+            value: tcp://earthly-buildkitd.default.svc.cluster.local:8372
+          - name: BUILDKIT_TCP_TRANSPORT_ENABLED
+            value: 'false'
+          
+      volumes:
+        - name: workspace
+          emptyDir: {}
+  backoffLimit: 4
