@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: earthly-buildkitd
+  labels:
+    app: earthly
+    component: buildkitd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: earthly
+      component: buildkitd
+  template:
+    metadata:
+      labels:
+        app: earthly
+        component: buildkitd
+    spec:
+      containers:
+      - name: buildkitd
+        image: earthly/buildkitd:v0.5.17
+        # Earthly's buildkit daemon does not currently support rootless modes.
+        securityContext:
+          privileged: true
+        volumeMounts:
+          - mountPath: /tmp/earthly
+            name: buildkitd-temp
+        env:
+          # This needs to be on to allow remote Earthly clients.
+          - name: BUILDKIT_TCP_TRANSPORT_ENABLED
+            value: 'true'
+          # This should be enabled, and certificates configured in a production environment.
+          - name: BUILDKIT_TLS_ENABLED
+            value: 'false'
+      volumes:
+        - name: buildkitd-temp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: earthly-buildkitd
+  labels:
+    app: earthly
+    component: buildkitd
+spec:
+  selector:
+    app: earthly
+    component: buildkitd
+  # Use session affinity to prevent "roaming" across multiple buildkit instances; if needed.
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 600 # This should be longer than your build.
+  ports:
+    - protocol: TCP
+      port: 8372
+      targetPort: 8372

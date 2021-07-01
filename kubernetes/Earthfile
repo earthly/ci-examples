@@ -1,0 +1,15 @@
+start:
+    LOCALLY
+    
+    # Ensure local dependencies are present
+    RUN which kind && which kubectl
+
+    RUN kind create cluster --name earthlydemo
+
+    RUN kubectl apply -f buildkit.yaml
+    RUN kubectl wait --for=condition=ready pod -l component=buildkitd -l app=earthly --timeout=90s
+
+    RUN kubectl apply -f earthly.yaml
+    RUN kubectl logs -f jobs/earthly
+
+    RUN kind delete cluster --name earthlydemo
