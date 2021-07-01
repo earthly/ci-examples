@@ -8,3 +8,7 @@ This example is _not_ production ready. In a production setting, you should:
 * Configure and log in to a Docker registry
 * Ensure your Docker daemon is accessible to the earthly pod
 * Mount / configure the workspace so you can get any artifacts produced out of the pod
+
+## Running Multiple Buildkit Instances
+
+Buildkit has local cache. to fully realize the benefits of `earthly`, you'll need to ensure that your connections are sticky to prevent any "roaming" builds. In addition, it could take longer for a cache to appear "warm" since each buildkit instance would need to build its own cache.
