@@ -1,6 +1,6 @@
 # Running Earthly in Kubernetes
 
-This is an example ddeployment of Earthly in Kubernetes. It uses an external `buildkitd` service to allow better isolation of the privileged pods.
+This is an example deployment of Earthly in Kubernetes. It uses an external `buildkitd` service to allow better isolation of the privileged pods.
 
 This example is _not_ production ready. In a production setting, you should:
 
