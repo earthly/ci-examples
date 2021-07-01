@@ -5,13 +5,11 @@ run:
 
     RUN kind create cluster --name earthlydemo
 
-    RUN ls -la
-    RUN pwd
-    RUN kubectl apply -f buildkit.yaml
+    RUN kubectl apply -f https://raw.githubusercontent.com/earthly/ci-examples/main/kubernetes/buildkit.yaml
     RUN kubectl wait --for=condition=available deployment/earthly-buildkitd              --timeout 90s
     RUN kubectl wait --for=condition=ready     pod -l component=buildkitd -l app=earthly --timeout=90s
 
-    RUN kubectl apply -f earthly.yaml
+    RUN kubectl apply -f https://raw.githubusercontent.com/earthly/ci-examples/main/kubernetes/earthly.yaml
     RUN kubectl wait --for=condition=ready     pod -l component=earthly -l app=earthly --timeout=90s
 
     RUN kubectl logs -f jobs/earthly
