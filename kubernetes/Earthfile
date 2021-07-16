@@ -10,7 +10,7 @@ start:
     RUN kubectl wait \
         --for=condition=available \
         deployment/earthly-buildkitd \
-        --timeout 90s
+        --timeout=90s
 
     RUN kubectl wait \
         --for=condition=ready pod \
