@@ -13,6 +13,10 @@ This example is _not_ production ready. In a production setting, you should:
 
 Requires [`kind`](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) and [`kubectl`](https://kubernetes.io/docs/tasks/tools/) to run the automated tools. Follow their instructions for installation on your platform.
 
+## Running The Example
+
+Clone this repository, and then simply run `earthly ./kubernetes+start`. This will use `earthly`'s `LOCALLY` functionality to perform operations directly on your computer. This is not recommended 
+
 ## Running Multiple Buildkit Instances
 
 Buildkit has local cache. to fully realize the benefits of `earthly`, you'll need to ensure that your connections are sticky to prevent any "roaming" builds. In addition, it could take longer for a cache to appear "warm" since each buildkit instance would need to build its own cache.
