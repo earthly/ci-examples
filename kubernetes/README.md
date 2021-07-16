@@ -15,7 +15,9 @@ Requires [`kind`](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) 
 
 ## Running The Example
 
-Clone this repository, and then simply run `earthly ./kubernetes+start`. This will use `earthly`'s `LOCALLY` functionality to perform operations directly on your computer. This is not recommended 
+Clone this repository, and then simply run `earthly ./kubernetes+start`. This will use `earthly`'s [`LOCALLY`](https://docs.earthly.dev/docs/earthfile#locally-experimental)functionality to perform operations directly on your computer.
+
+Run `earthly ./kubernetes+cleanup` to remove the cluster and its contents when you are done.
 
 ## Running Multiple Buildkit Instances
 
