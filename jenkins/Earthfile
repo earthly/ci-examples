@@ -46,12 +46,13 @@ jenkins-server:
     COPY ./install_scripts/*.groovy /usr/share/jenkins/ref/init.groovy.d/
 
 jenkins-earthly-runner:
-    ARG RUNNER_VERSION=4.7
+    ARG RUNNER_VERSION
+    ARG RUNNER_TAG
     
     FROM earthly/earthly:latest
     RUN apk add openjdk11
     ENTRYPOINT []
-    SAVE IMAGE --push dchw/earthly-jenkins:latest
+    SAVE IMAGE $RUNNER_TAG
 
 CREATE_NETWORK:
     COMMAND

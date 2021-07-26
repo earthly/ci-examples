@@ -4,12 +4,61 @@ start:
     # Ensure local dependencies are present
     RUN which kind && which kubectl
 
-    RUN kind create cluster --name earthlydemo
+    RUN kind create cluster --name earthlydemo-aio
 
-    RUN kubectl apply -f buildkit.yaml
-    RUN kubectl wait --for=condition=ready pod -l component=buildkitd -l app=earthly --timeout=90s
+    RUN kubectl apply -f ./all-in-one/earthly.yaml
+
+    RUN sleep 15 # Let the cluster register the job
+
+    RUN kubectl wait \
+        --for=condition=ready \
+        pod \
+        -l app=earthly \
+        --timeout=90s
+
+    RUN kubectl logs -f jobs/earthly
+
+start-remote-buildkitd:
+    LOCALLY
+    
+    DO +DEPS
+
+    RUN kind create cluster --name earthlydemo-remote
+
+    RUN kubectl apply -f ./remote-buildkitd/buildkit.yaml
+
+    RUN kubectl wait \
+        --for=condition=available \
+        deployment/earthly-buildkitd \
+        --timeout=90s
+
+    RUN kubectl wait \
+        --for=condition=ready pod \
+        -l component=buildkitd \
+        -l app=earthly \
+        --timeout=90s
+
+    RUN kubectl apply -f ./remote-buildkitd/earthly.yaml
+
+    RUN kubectl wait \
+        --for=condition=ready \
+        pod \
+        -l component=earthly \
+        -l app=earthly \
+        --timeout=90s
 
     RUN kubectl apply -f earthly.yaml
     RUN kubectl logs -f jobs/earthly
 
-    RUN kind delete cluster --name earthlydemo
+clean:
+    LOCALLY
+
+    DO +DEPS
+
+    RUN kind delete cluster --name earthlydemo-aio || true
+    RUN kind delete cluster --name earthlydemo-remote || true
+
+DEPS:
+    COMMAND
+    # Ensure local dependencies are present
+    RUN which kind && which kubectl

@@ -4,7 +4,6 @@ metadata:
   name: earthly
   labels:
     app: earthly
-    component: earthly
 spec:
   template:
     metadata:
@@ -16,8 +15,10 @@ spec:
       restartPolicy: Never
       containers:
       - name: earthly
-        image: earthly/earthly:v0.5.17
+        image: earthly/earthly:v0.5.20
         args: ["github.com/earthly/ci-example-project:main+build"]
+        securityContext:
+          privileged: true
         volumeMounts:
           - mountPath: /workspace
             name: workspace
@@ -25,11 +26,6 @@ spec:
           # To build and save Docker images, provide the DOCKER_HOST variable instead.
           - name: NO_DOCKER
             value: '1'
-          - name: BUILDKIT_HOST
-            value: tcp://earthly-buildkitd.default.svc.cluster.local:8372
-          # This should be enabled, and certificates configured in a production environment.
-          - name: BUILDKIT_TCP_TRANSPORT_ENABLED
-            value: 'false'
       volumes:
         - name: workspace
           emptyDir: {}
