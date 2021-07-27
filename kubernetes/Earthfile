@@ -1,8 +1,7 @@
 start:
     LOCALLY
     
-    # Ensure local dependencies are present
-    RUN which kind && which kubectl
+    DO +DEPS
 
     RUN kind create cluster --name earthlydemo-aio
 
@@ -47,7 +46,6 @@ start-remote-buildkitd:
         -l app=earthly \
         --timeout=90s
 
-    RUN kubectl apply -f earthly.yaml
     RUN kubectl logs -f jobs/earthly
 
 clean:
