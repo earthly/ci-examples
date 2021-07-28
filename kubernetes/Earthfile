@@ -3,9 +3,28 @@ start:
     
     DO +DEPS
 
-    RUN kind create cluster --name earthlydemo
+    RUN kind create cluster --name earthlydemo-aio
 
-    RUN kubectl apply -f ./buildkit.yaml
+    RUN kubectl apply -f ./all-in-one/earthly.yaml
+
+    RUN sleep 15 # Let the cluster register the job
+
+    RUN kubectl wait \
+        --for=condition=ready \
+        pod \
+        -l app=earthly \
+        --timeout=90s
+
+    RUN kubectl logs -f jobs/earthly
+
+start-remote-buildkitd:
+    LOCALLY
+    
+    DO +DEPS
+
+    RUN kind create cluster --name earthlydemo-remote
+
+    RUN kubectl apply -f ./remote-buildkitd/buildkit.yaml
 
     RUN kubectl wait \
         --for=condition=available \
@@ -18,7 +37,7 @@ start:
         -l app=earthly \
         --timeout=90s
 
-    RUN kubectl apply -f ./earthly.yaml
+    RUN kubectl apply -f ./remote-buildkitd/earthly.yaml
 
     RUN kubectl wait \
         --for=condition=ready \
@@ -34,8 +53,8 @@ clean:
 
     DO +DEPS
 
-    RUN kind delete cluster --name earthlydemo || true
-
+    RUN kind delete cluster --name earthlydemo-aio || true
+    RUN kind delete cluster --name earthlydemo-remote || true
 
 DEPS:
     COMMAND

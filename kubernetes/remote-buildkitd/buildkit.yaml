@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: buildkitd
-        image: earthly/buildkitd:v0.5.17
+        image: earthly/buildkitd:v0.5.20
         # Earthly's buildkit daemon does not currently support rootless modes.
         securityContext:
           privileged: true
