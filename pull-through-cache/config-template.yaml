@@ -1,0 +1,23 @@
+version: 0.1
+log:
+  level: info
+  fields:
+    service: registry
+storage:
+  cache:
+    blobdescriptor: inmemory
+  filesystem:
+    rootdirectory: /var/lib/registry
+http:
+  addr: :5000
+  debug:
+    addr: :6000
+  # No TLS in demo, makes life easier
+proxy:
+  remoteurl: https://registry-1.docker.io
+  username: ${REPO_USER}
+  password: "${REPO_PASSWORD}"
+auth:
+  htpasswd:
+    realm: basic-realm
+    path: /auth/htpasswd

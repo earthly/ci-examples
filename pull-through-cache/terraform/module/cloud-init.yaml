@@ -1,0 +1,81 @@
+#cloud-config
+
+package_update: true
+package_upgrade: true
+package_reboot_if_required: true
+
+groups:
+  - docker
+
+users:
+  - name: myuser
+    lock_passwd: true
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ${init_ssh_public_key}
+    groups: docker
+    sudo: ALL=(ALL) NOPASSWD:ALL
+
+packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg-agent
+  - software-properties-common
+  - unattended-upgrades
+
+write_files:
+  - path: /auth/htpasswd
+    owner: root:root
+    permissions: 0644
+    content: ${init_htpasswd}
+
+  - path: /config.yaml
+    owner: root:root
+    permissions: 0644
+    # Send help I am templating YAML in a YAML :(
+    content: |
+      version: 0.1
+      log:
+        level: info
+        fields:
+          service: registry
+      storage:
+        cache:
+          blobdescriptor: inmemory
+        filesystem:
+          rootdirectory: /var/lib/registry
+      http:
+        addr: :5000
+        # Uncomment to add debug to the mirror. Accessible over the droplets IP
+        # debug:
+        #   addr: :6000
+        headers:
+          X-Content-Type-Options: [nosniff]
+        tls:
+          letsencrypt:
+            cachefile: /certs/cachefile
+            email: me@work
+            hosts: [${init_repository_to_mirror}.my.domain]
+      health:
+        storagedriver:
+          enabled: true
+          interval: 10s
+          threshold: 3
+      proxy:
+        remoteurl: https://${init_repository_to_mirror}
+        username: myuser
+        password: ${init_user_password}
+      auth:
+        htpasswd:
+          realm: basic-realm
+          path: /auth/htpasswd
+
+runcmd:
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+  - add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+  - apt-get update -y
+  - apt-get install -y docker-ce docker-ce-cli containerd.io
+  - systemctl start docker
+  - systemctl enable docker
+  - docker run -d -p 443:5000 -p 6000:6000 --restart=always --name=through-cache -v /auth:/auth -v /certs:/certs -v /config.yaml:/etc/docker/registry/config.yml dchw/registry:a1e30cca

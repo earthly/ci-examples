@@ -1,0 +1,93 @@
+ARG TARGET_SHA=1563384b
+
+build-registry:
+    FROM golang:1.16-alpine
+
+    RUN apk add --no-cache bash git openssh make
+
+    GIT CLONE --branch=main https://github.com/docker/distribution distribution
+    RUN cd distribution && git checkout $TARGET_SHA && make binaries
+
+    SAVE ARTIFACT distribution/bin/registry
+
+updated-registry:
+    FROM registry:2.7
+
+    COPY +build-registry/registry /bin/registry
+    SAVE IMAGE registry:$TARGET_SHA
+
+pull-through-config:
+    FROM alpine:3
+
+    RUN apk add gettext
+    COPY config-template.yaml .
+    RUN --secret REPO_USER=+secrets/REPO_USER \
+        --secret REPO_PASSWORD=+secrets/REPO_PASSWORD \
+        envsubst < config-template.yaml > config.yaml
+
+    SAVE ARTIFACT config.yaml
+
+pull-through-auth:
+    FROM alpine:3
+
+    ARG CACHE_USER
+    ARG CACHE_PASSWORD
+    RUN apk add apache2-utils
+    RUN htpasswd -nbB $CACHE_USER $CACHE_PASSWORD | head -n 1 > auth
+
+    SAVE ARTIFACT auth
+
+pull-through:
+    LOCALLY
+
+    ARG CACHE_USER=user
+    ARG CACHE_PASSWORD=hunter2
+
+    COPY +pull-through-config/config.yaml config.yaml
+
+    COPY --build-arg CACHE_USER \
+         --build-arg CACHE_PASSWORD \
+         +pull-through-auth/auth auth
+
+    # Run the local repository
+    WITH DOCKER --load registry:updated=+updated-registry
+        RUN docker run -d \
+            --network host \
+            -v $(pwd)/config.yaml:/etc/docker/registry/config.yml \
+            -v $(pwd)/auth:/auth/htpasswd \
+            -p 127.0.0.1:5000:5000 \
+            -p 127.0.0.1:6000:6000 \
+            --name through-cache \
+            registry:updated
+    END
+
+    RUN sleep 5
+
+    # Log in to the cache locally, so the credentials are in your Docker credential store
+    RUN docker login --username $CACHE_USER --password $CACHE_PASSWORD localhost:5000
+
+    # Configure Earthly to use the cache. The weird spacing is intentional, as there is a bug in one of our YAML dependencies.
+    RUN earthly config global.buildkit_additional_config "'[registry.\"docker.io\"]
+
+                       http = true
+
+                       mirrors = [\"localhost:5000\"]'}"
+
+    # Run buildkit on the host network too. This means they can share DNS for localhost. Beats having to add a hosts entry,
+    # especially when we are already going to need to restart the buildkit daemon _anyways_.
+    RUN earthly config global.buildkit_additional_args '["--network", "host"]'
+
+pull-through-clean:
+    LOCALLY
+
+    RUN docker rm -f through-cache
+    RUN rm config.yaml || true
+    RUN rm auth || true
+    RUN earthly config global.buildkit_additional_config "\"\""
+    RUN earthly config global.buildkit_additional_args "[]"
+
+pull-through-stats:
+    LOCALLY
+
+    RUN docker run --network host alpine:3 apk add jq && \
+        wget -q -O - http://localhost:6000/debug/vars | jq .registry.proxy
