@@ -1,6 +1,12 @@
 # Pull-Through Cache
 
-This is an example of how you might configure and use a pull-through cache to augment your Earthly CI builds. There are a couple parts within this folder, some of which are meant for illustration only. If you need additional help configuring a pull-through cache with 
+This is an example of how you might configure and use a pull-through cache to augment your Earthly CI builds. There are a couple parts within this folder, some of which are meant for illustration only.
+
+Pull-Through caches aren't something everybody needs. Setting one of these up may help in the following situations:
+
+* You are exceeding your registries pull limit
+* Your registry can't cope with the load from CI or Production
+* You want to cache images closer to where they are actually used
 
 ## `terraform` Folder
 
