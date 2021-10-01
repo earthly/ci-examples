@@ -18,7 +18,7 @@ This target provides an up-to-date version of `registry:2`, if you need it.
 
 ## Running The Demo 
 
-### `+local-pull-through`
+### `+pull-through`
 
 This target sets up and runs a local pull through cache. It _should_ be usable against any repository; it's been tested successfully against `registry-1.docker.io` and `ghcr.io`. Though, Docker Hub is hard coded and will require you to manually edit the `Earthfile` (the setting for buildkit) and `config-template.yaml` (the proxy URL). Its also possible to omit the username and password to mirror a public repository.
 
