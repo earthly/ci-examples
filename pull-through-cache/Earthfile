@@ -5,8 +5,8 @@ build-registry:
 
     RUN apk add --no-cache bash git openssh make
 
-    GIT CLONE --branch=main https://github.com/docker/distribution distribution
-    RUN cd distribution && git checkout $TARGET_SHA && make binaries
+    GIT CLONE --branch=$TARGET_SHA https://github.com/docker/distribution distribution
+    RUN cd distribution && make binaries
 
     SAVE ARTIFACT distribution/bin/registry
 
